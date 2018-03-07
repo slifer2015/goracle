@@ -198,9 +198,10 @@ func (st *statement) ExecContext(ctx context.Context, args []driver.NamedValue) 
 
 	defer func() {
 		if err != nil && err == driver.ErrBadConn {
-			c := st.conn
+			if Log != nil {
+				Log("error", driver.ErrBadConn)
+			}
 			st.Close()
-			c.Close()
 		}
 	}()
 
@@ -336,9 +337,7 @@ func (st *statement) QueryContext(ctx context.Context, args []driver.NamedValue)
 
 	defer func() {
 		if err != nil && err == driver.ErrBadConn {
-			c := st.conn
 			st.Close()
-			c.Close()
 		}
 	}()
 

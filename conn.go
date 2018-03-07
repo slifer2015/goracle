@@ -25,6 +25,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"strings"
 	//"fmt"
 	"sync"
 	"time"
@@ -325,6 +326,10 @@ func maybeBadConn(err error) error {
 	}); ok {
 		// Yes, this is copied from rana/ora, but I've put it there, so it's mine. @tgulacsi
 		switch cd.Code() {
+		case 0:
+			if strings.Contains(err.Error(), " DPI-1002: ") {
+				return driver.ErrBadConn
+			}
 		case 12609, 1012, 3113, 3114, 12170, 12528, 12545, 12547, 24315, 28547, 03135:
 			// ORA-12609: TNS:Receive timeout occurred
 			// ORA-01012: Not logged on
