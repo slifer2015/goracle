@@ -49,9 +49,19 @@ type conn struct {
 	*drv
 }
 
+func (c *conn) getError() error {
+	if c == nil || c.drv == nil {
+		return driver.ErrBadConn
+	}
+	return c.drv.getError()
+}
+
 func (c *conn) Break() error {
 	c.RLock()
 	defer c.RUnlock()
+	if Log != nil {
+		Log("msg", "Break", "dpiConn", c.dpiConn)
+	}
 	if C.dpiConn_breakExecution(c.dpiConn) == C.DPI_FAILURE {
 		return errors.Wrap(c.getError(), "Break")
 	}
@@ -66,11 +76,13 @@ func (c *conn) Ping(ctx context.Context) error {
 	defer c.RUnlock()
 	done := make(chan error, 1)
 	go func() {
+		defer close(done)
 		failure := C.dpiConn_ping(c.dpiConn) == C.DPI_FAILURE
 		if failure {
 			done <- maybeBadConn(errors.Wrap(c.getError(), "Ping"))
+			return
 		}
-		close(done)
+		done <- nil
 	}()
 
 	select {
