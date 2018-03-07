@@ -64,25 +64,28 @@ func (c *conn) Ping(ctx context.Context) error {
 	}
 	c.RLock()
 	defer c.RUnlock()
-	done := make(chan struct{})
+	done := make(chan error, 1)
 	go func() {
-		select {
-		case <-done:
-		case <-ctx.Done():
-			// select again to avoid race condition if both are done
-			select {
-			case <-done:
-			default:
-				_ = c.Break()
-			}
+		failure := C.dpiConn_ping(c.dpiConn) == C.DPI_FAILURE
+		if failure {
+			done <- maybeBadConn(errors.Wrap(c.getError(), "Ping"))
 		}
+		close(done)
 	}()
-	failure := C.dpiConn_ping(c.dpiConn) == C.DPI_FAILURE
-	close(done)
-	if failure {
-		return maybeBadConn(errors.Wrap(c.getError(), "Ping"))
+
+	select {
+	case err := <-done:
+		return err
+	case <-ctx.Done():
+		// select again to avoid race condition if both are done
+		select {
+		case err := <-done:
+			return err
+		default:
+			_ = c.Break()
+			return driver.ErrBadConn
+		}
 	}
-	return nil
 }
 
 // Prepare returns a prepared statement, bound to this connection.
