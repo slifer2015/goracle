@@ -1279,7 +1279,6 @@ func TestNumberMarshal(t *testing.T) {
 }
 
 func TestExecHang(t *testing.T) {
-	t.Parallel()
 	defer tl.enableLogging(t)()
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
